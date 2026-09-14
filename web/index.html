@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta http-equiv="Content-Security-Policy" 
+        content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com; object-src 'none'; base-uri 'self';">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="ColorSight - Mobile screening for colorblindness and real-world color identification.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ColorSight">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>ColorSight — Colorblind Screening & Color Identifier</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // File System Access API helper: prompts native Windows/OS "Save As" location dialog
+    window.savePdfWithFilePicker = async function(base64Data, filename, callback) {
+      function reply(val) {
+        if (typeof callback === 'function') {
+          try { callback(val); } catch (_) {}
+        }
+      }
+      try {
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+        // 1. Try File System Access API (Chrome, Edge, Opera) - opens native "Save As" dialog
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: filename,
+              types: [{
+                description: 'PDF Screening Report (*.pdf)',
+                accept: { 'application/pdf': ['.pdf'] }
+              }]
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            reply('saved');
+            return 'saved';
+          } catch (err) {
+            if (err.name === 'AbortError') {
+              reply('cancelled');
+              return 'cancelled';
+            }
+            console.warn('showSaveFilePicker failed, falling back to download:', err);
+          }
+        }
+
+        // 2. Fallback: Trigger standard HTML5 anchor download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        reply('downloaded');
+        return 'downloaded';
+      } catch (e) {
+        console.error('Error in savePdfWithFilePicker:', e);
+        reply('error');
+        return 'error';
+      }
+    };
+
+    window.addEventListener('message', async function(event) {
+      if (!event.data || event.data.type !== 'colorsight_save_pdf') return;
+      const base64Data = event.data.base64Data;
+      const filename = event.data.filename;
+      await window.savePdfWithFilePicker(base64Data, filename, function(status) {
+        window.postMessage({ type: 'colorsight_save_pdf_result', status: status }, '*');
+      });
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js');
+      });
+    }
+  </script>
+</body>
+</html>
