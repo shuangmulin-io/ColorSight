@@ -144,6 +144,13 @@ python -m http.server 8080 --directory build/web
 ```
 Navigate to `http://localhost:8080` in your web browser.
 
+### 5. Deploy to Vercel
+ColorSight includes out-of-the-box support for [Vercel](https://vercel.com):
+- **Configuration:** Pre-configured with [`vercel.json`](vercel.json) and [`vercel-build.sh`](vercel-build.sh).
+- **Framework Preset:** `Other`
+- **Output Directory:** `build/web`
+- **Build Command:** `bash vercel-build.sh`
+
 ---
 
 ## 🧪 Automated Testing & QA

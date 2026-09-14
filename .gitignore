@@ -61,3 +61,6 @@ android/local.properties
 **/ios/Flutter/Generated.xcconfig
 **/ios/Flutter/flutter_export_environment.sh
 .flutter-plugins
+
+# CI / Vercel cloned Flutter SDK
+flutter/
